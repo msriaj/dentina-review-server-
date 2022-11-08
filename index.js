@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
 const { timeStamp } = require("./util/timeStamp");
 
 const app = express();
@@ -32,6 +32,13 @@ async function run() {
         createdAt: timeStamp(),
       });
       console.log(result);
+      res.send(result);
+    });
+
+    app.get("/service/:id", async (req, res) => {
+      const id = req.params.id;
+      let result = await serviceCollection.findOne({ _id: ObjectId(id) });
+
       res.send(result);
     });
 
