@@ -34,6 +34,20 @@ async function run() {
       console.log(result);
       res.send(result);
     });
+
+    app.get("/services", async (req, res) => {
+      let result = null;
+      if (req?.query?.limit) {
+        result = await serviceCollection
+          .find({})
+          .limit(parseInt(req.query.limit))
+          .toArray();
+      } else {
+        result = await serviceCollection.find({}).toArray();
+      }
+
+      res.send(result);
+    });
   } finally {
     console.log("hello i am working");
   }
