@@ -1,0 +1,46 @@
+const express = require("express");
+const cors = require("cors");
+const { MongoClient } = require("mongodb");
+const { timeStamp } = require("./util/timeStamp");
+
+const app = express();
+
+app.use(express.json());
+app.use(cors());
+
+//server root directory
+app.get("/", (req, res) => {
+  res.send("server Working");
+});
+
+// crud operations
+async function run() {
+  try {
+    const mongouri =
+      "mongodb+srv://sohel:xwivYRWJY4c4NRSc@cluster0.xj8ujnm.mongodb.net/?retryWrites=true&w=majority";
+
+    const client = new MongoClient(mongouri);
+    const database = await client.db("dentina");
+
+    const serviceCollection = await database.collection("services");
+
+    app.post("/addservice", async (req, res) => {
+      const service = req.body;
+      console.log(service);
+      const result = await serviceCollection.insertOne({
+        ...service,
+        createdAt: timeStamp(),
+      });
+      console.log(result);
+      res.send(result);
+    });
+  } finally {
+    console.log("hello i am working");
+  }
+}
+
+run();
+
+app.listen(5000, () => {
+  console.log("server listen on port 5000");
+});

@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^8.5.1",
+    "moment-timezone": "^0.5.38",
+    "mongodb": "^4.11.0"
+  },
+  "name": "dentina-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "server": "node-dev index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
