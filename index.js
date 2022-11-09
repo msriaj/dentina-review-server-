@@ -23,6 +23,26 @@ async function run() {
     const database = await client.db("dentina");
 
     const serviceCollection = await database.collection("services");
+    const reviewCollection = await database.collection("reviews");
+
+    app.get("/services", async (req, res) => {
+      let result = null;
+      if (req?.query?.limit) {
+        result = await serviceCollection
+          .find({})
+          .limit(parseInt(req.query.limit))
+          .toArray();
+      } else {
+        result = await serviceCollection.find({}).toArray();
+      }
+      res.send(result);
+    });
+
+    app.get("/service/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await serviceCollection.findOne({ _id: ObjectId(id) });
+      res.send(result);
+    });
 
     app.post("/addservice", async (req, res) => {
       const service = req.body;
@@ -35,28 +55,27 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/service/:id", async (req, res) => {
-      const id = req.params.id;
-      let result = await serviceCollection.findOne({ _id: ObjectId(id) });
-
+    app.get("/review", async (req, res) => {
+      const result = await reviewCollection.find({}).toArray();
+      console.log(result);
       res.send(result);
     });
 
-    app.get("/services", async (req, res) => {
-      let result = null;
-      if (req?.query?.limit) {
-        result = await serviceCollection
-          .find({})
-          .limit(parseInt(req.query.limit))
-          .toArray();
-      } else {
-        result = await serviceCollection.find({}).toArray();
-      }
+    app.get("/review/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await reviewCollection.find({ serviceId: id }).toArray();
+      res.send(result);
+    });
 
+    app.post("/review", async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne({
+        ...review,
+        createdAt: timeStamp(),
+      });
       res.send(result);
     });
   } finally {
-    console.log("hello i am working");
   }
 }
 
