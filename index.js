@@ -57,7 +57,7 @@ async function run() {
 
     app.get("/review", async (req, res) => {
       const result = await reviewCollection.find({}).toArray();
-      console.log(result);
+
       res.send(result);
     });
 
@@ -65,6 +65,16 @@ async function run() {
       const id = req.params.id;
       const result = await reviewCollection.find({ serviceId: id }).toArray();
       res.send(result);
+    });
+    app.get("/rating/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await reviewCollection.find({ serviceId: id }).toArray();
+      const sum = result.reduce((a, b) => a + b.rating, 0);
+      const totalReviews = result.length;
+      const avgRating = sum / totalReviews;
+      const avgRatingRound = Math.round(avgRating * 2) / 2;
+
+      res.send({ totalReviews, avgRatingRound });
     });
 
     app.post("/review", async (req, res) => {
@@ -74,6 +84,17 @@ async function run() {
         createdAt: timeStamp(),
       });
       res.send(result);
+    });
+    app.get("/myreview", async (req, res) => {
+      const getEmail = req.query.email;
+      if (getEmail) {
+        const result = await reviewCollection
+          .find({ email: getEmail })
+          .toArray();
+        res.send(result);
+      } else {
+        res.send("Unauthorize Access");
+      }
     });
   } finally {
   }
