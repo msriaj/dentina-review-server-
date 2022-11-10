@@ -21,11 +21,11 @@ const verifyToken = (req, res, next) => {
   if (!authorization) res.status(401).send("Unauthorized request");
 
   const accessToken = authorization.split(" ")[1];
-  jwt.verify(accessToken, process.env.JWT_SECRET_KEY, (err, decode) => {
+  jwt.verify(accessToken, process.env.JWT_SECRET_KEY, (err, decoded) => {
     if (err) {
       res.status(401).send("Unauthorized request");
     }
-    req.decode = decode;
+    req.decoded = decoded;
     next();
   });
 };
@@ -106,14 +106,14 @@ async function run() {
       res.send(result);
     });
     // add services
-    app.post("/addservice", verifyToken, async (req, res) => {
+    app.post("/addservice", async (req, res) => {
       const service = req.body;
-      if (service.email === req.decode.email) {
-        const result = await serviceCollection.insertOne({
-          ...service,
-          createdAt: timeStamp(),
-        });
-      }
+
+      const result = await serviceCollection.insertOne({
+        ...service,
+        createdAt: timeStamp(),
+      });
+
       res.send(result);
     });
 
@@ -126,7 +126,7 @@ async function run() {
 
       res.send(result);
     });
-    // singel review
+    // singel service  review
     app.get("/review/:id", async (req, res) => {
       const id = req.params.id;
       const result = await reviewCollection
@@ -135,6 +135,14 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
+    // singel service  review
+    app.get("/reviewdetails/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await reviewCollection.findOne({ _id: ObjectId(id) });
+      res.send(result);
+    });
+
     // create review
     app.post("/review", async (req, res) => {
       const { serviceId, ...rest } = req.body;
@@ -146,19 +154,35 @@ async function run() {
       });
       res.send(result);
     });
+
     // my reviews
-    app.get("/myreview", verifyToken, async (req, res) => {
+    app.get("/myreview", async (req, res) => {
       const getEmail = req.query.email;
 
-      if (getEmail === req.decode.email) {
-        const result = await reviewCollection
-          .find({ email: getEmail })
-          .sort({ createdAt: -1 })
-          .toArray();
-        res.send(result);
-      } else {
-        res.send("Unauthorize Access");
-      }
+      const result = await reviewCollection
+        .find({ email: getEmail })
+        .sort({ createdAt: -1 })
+        .toArray();
+      res.send(result);
+    });
+
+    // edit review
+    app.put("/myreview", async (req, res) => {
+      const { _id, serviceId, ...updateDoc } = req.body;
+
+      const result = await reviewCollection.replaceOne(
+        { _id: ObjectId(_id) },
+        { ...updateDoc, serviceId: ObjectId(serviceId), createdAt: timeStamp() }
+      );
+      res.send(result);
+    });
+
+    // delete review
+    app.delete("/myreview", async (req, res) => {
+      const result = await reviewCollection.deleteOne({
+        _id: ObjectId(req.body.id),
+      });
+      res.send(result);
     });
 
     // generate jwt token
