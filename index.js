@@ -16,18 +16,21 @@ app.get("/", (req, res) => {
 });
 
 const verifyToken = (req, res, next) => {
-  const authorization = req.headers.authorization;
+  try {
+    const authorization = req.headers.authorization;
+    console.log(authorization);
+    if (!authorization) res.status(401).send("Unauthorized request");
 
-  if (!authorization) res.status(401).send("Unauthorized request");
+    const accessToken = authorization.split(" ")[1];
+    const decode = jwt.verify(accessToken, process.env.JWT_SECRET_KEY);
 
-  const accessToken = authorization.split(" ")[1];
-  jwt.verify(accessToken, process.env.JWT_SECRET_KEY, (err, decoded) => {
-    if (err) {
-      res.status(401).send("Unauthorized request");
+    if (decode) {
+      req.decode = decode;
+      next();
     }
-    req.decoded = decoded;
-    next();
-  });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 };
 
 // crud operations
@@ -143,8 +146,9 @@ async function run() {
       res.send(result);
     });
 
-    // create review
-    app.post("/review", async (req, res) => {
+    // add review
+    app.post("/review", verifyToken, async (req, res) => {
+      console.log(req.decoded);
       const { serviceId, ...rest } = req.body;
 
       const result = await reviewCollection.insertOne({
@@ -156,7 +160,11 @@ async function run() {
     });
 
     // my reviews
-    app.get("/myreview", async (req, res) => {
+    app.get("/myreview", verifyToken, async (req, res) => {
+      // checking email is valid
+      if (req?.decode?.email !== req.query.email) {
+        res.status(401).send({ message: "Unauthorized Access" });
+      }
       const getEmail = req.query.email;
 
       const result = await reviewCollection
@@ -167,18 +175,35 @@ async function run() {
     });
 
     // edit review
-    app.put("/myreview", async (req, res) => {
-      const { _id, serviceId, ...updateDoc } = req.body;
+    app.put("/myreview", verifyToken, async (req, res) => {
+      const { _id, email, serviceId, ...updateDoc } = req.body;
+      if (req?.decode?.email !== email) {
+        res.status(401).send({ message: "Unauthorized Access" });
+      }
 
       const result = await reviewCollection.replaceOne(
         { _id: ObjectId(_id) },
-        { ...updateDoc, serviceId: ObjectId(serviceId), createdAt: timeStamp() }
+        {
+          ...updateDoc,
+          serviceId: ObjectId(serviceId),
+          createdAt: timeStamp(),
+          email,
+        }
       );
       res.send(result);
     });
 
     // delete review
-    app.delete("/myreview", async (req, res) => {
+    app.delete("/myreview", verifyToken, async (req, res) => {
+      const theReview = await reviewCollection.findOne({
+        _id: ObjectId(req.body.id),
+      });
+
+      // cheking this review belong to the user or not
+      if (req?.decode?.email !== theReview?.email) {
+        res.status(401).send({ message: "Unauthorized Access" });
+      }
+
       const result = await reviewCollection.deleteOne({
         _id: ObjectId(req.body.id),
       });
@@ -192,7 +217,9 @@ async function run() {
       console.log(email);
       if (!email) return res.status(400).send("Something went wrong !");
       // create token
-      const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY);
+      const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY, {
+        expiresIn: "1d",
+      });
 
       res.send({ token });
     });
