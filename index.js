@@ -250,6 +250,53 @@ async function run() {
       });
       res.send(result);
     });
+
+    // mongodb practice
+    app.get("/test", async (req, res) => {
+      const find = await reviewCollection
+        .aggregate([
+          {
+            $match: {},
+          },
+          {
+            $lookup: {
+              from: "services",
+              localField: "serviceId",
+              foreignField: "_id",
+              as: "service",
+            },
+          },
+          {
+            $group: {
+              _id: "$serviceId",
+              totalRating: { $sum: "$rating" },
+              count: { $sum: 1 },
+              price: { $first: "$service.price" },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              totalRating: 1,
+              count: 1,
+              avg: { $divide: ["$totalRating", "$count"] }, // total/ count
+              price: { $arrayElemAt: ["$price", 0] },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              totalRating: 1,
+              count: 1,
+              avg: 1,
+              price: { $toInt: "$price" },
+            },
+          },
+        ])
+        .toArray();
+
+      res.send(find);
+    });
   } finally {
   }
 }
